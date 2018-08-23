@@ -1,4 +1,3 @@
-
 declare namespace nila {
 
   export type Thenable<T> = PromiseLike<T>;
@@ -11,66 +10,43 @@ declare namespace nila {
     (listener: (e: T) => any, thisArg?: any): IDisposable;
   }
 
-  export class Emitter<T> {
-    constructor();
-    readonly event: IEvent<T>;
-    fire(event?: T): void;
-    dispose(): void;
-  }
-
-  export class Promise<T = any, TProgress = any> {
-    constructor(
-      executor: (
-        resolve: (value: T | PromiseLike<T>) => void,
-        reject: (reason: any) => void,
-        progress: (progress: TProgress) => void) => void,
-      oncancel?: () => void);
-
-    public then<TResult1 = T, TResult2 = never>(
-      onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | null,
-      onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | null,
-      onprogress?: (progress: TProgress) => void): Promise<TResult1 | TResult2, TProgress>;
-
-    public done(
-      onfulfilled?: (value: T) => void,
-      onrejected?: (reason: any) => void,
-      onprogress?: (progress: TProgress) => void): void;
-
-    public cancel(): void;
-
-    public static as(value: null): Promise<null>;
-    public static as(value: undefined): Promise<undefined>;
-    public static as<T>(value: PromiseLike<T>): PromiseLike<T>;
-    public static as<T, SomePromise extends PromiseLike<T>>(value: SomePromise): SomePromise;
-    public static as<T>(value: T): Promise<T>;
-
-    public static is(value: any): value is PromiseLike<any>;
-
-    public static timeout(delay: number): Promise<void>;
-
-    public static join<T1, T2>(promises: [T1 | PromiseLike<T1>, T2 | PromiseLike<T2>]): Promise<[T1, T2]>;
-    public static join<T>(promises: (T | PromiseLike<T>)[]): Promise<T[]>;
-
-    public static any<T>(promises: (T | PromiseLike<T>)[]): Promise<{ key: string; value: Promise<T>; }>;
-
-    public static wrap<T>(value: T | PromiseLike<T>): Promise<T>;
-
-    public static wrapError<T = never>(error: Error): Promise<T>;
-  }
-
   export interface CancellationToken {
     readonly isCancellationRequested: boolean;
     readonly onCancellationRequested: IEvent<any>;
   }
 
   export function generateUuid(): string;
+
+  export enum ChartDataResolution {
+    M,
+    M5,
+    M15,
+    M30,
+    Hour,
+    Day,
+    Week,
+    Month,
+    Year
+  }
+
+  export enum ChartDataRange {
+    IntradayStock,
+    IntradayFuture,
+    DailyStock,
+    DailyFuture,
+    Continuous, // FX/Crypto currencies
+  }
 }
 
 declare namespace nila.chart {
   export function create(domElement: HTMLElement): IChartsService;
 
+  export function dispose(container: HTMLElement): void;
+
   export interface IChartsService {
     createChart(opt: IChartCreateOptions): IChartService;
+    removeAllCharts(): void;
+    dispose(): void;
   }
 
   export interface IChartService {
@@ -81,6 +57,7 @@ declare namespace nila.chart {
     addNewPart(opts: IChartPartOptions): void
     addSeries(partName: string, series: IChartSeriesOptions): void
     removeSeries(name: string): void
+    executeCommand(commandId: string, ...args: any[]): void;
   }
 
   export interface IChart {
@@ -111,7 +88,8 @@ declare namespace nila.chart {
   export interface IChartCreateOptions {
     parts: IChartPartOptions[],
     dataSources: string[],
-    interval: number
+    dataResolution: ChartDataResolution,
+    dataRange: ChartDataRange
   }
 
   export interface IBaseDataSource {
@@ -126,14 +104,21 @@ declare namespace nila.chart {
   export interface IDataPoint {
     [key: string]: any
   }
+
 }
 
 declare namespace nila.graphic {
+  //#region formatter
+  export function registerDatetimeFormatter(interval: ChartDataResolution, formatter: (number) => string): IDisposable;
+
+  //#endregion
+
+  //#region suggesion
   export function registerSuggestionItemProvider(graphicType: string, provider: SuggestionItemProvider): IDisposable;
 
   export interface ISuggestion {
-    label: string;
-    insertText: string;
+    id: string;
+    text: string;
   }
 
   export interface SuggestionContext {
@@ -149,4 +134,20 @@ declare namespace nila.graphic {
     provideSuggestionItems(context: SuggestionContext, token: CancellationToken): SuggestResult[] | Thenable<SuggestResult[]>;
     resolveSuggestionItem?(item: ISuggestion, token: CancellationToken): Thenable<void>;
   }
+
+  //#endregion
+
+  //#region data
+  export function registerDataProvider(symbolName: string, provider: DataProvider): IDisposable
+
+  export interface DataQuery {
+    name: string;
+    count: number;
+    timeStamp: string; //ISO 8601
+  }
+
+  export interface DataProvider {
+    provideData(context: DataQuery, token: CancellationToken): nila.chart.IDataPoint[] | Thenable<nila.chart.IDataPoint[]>;
+  }
+  //#endregion
 }

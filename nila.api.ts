@@ -1,3 +1,6 @@
+import 'nila/style/index.scss';
+import '@phosphor/widgets/style/index.css'
+
 import { createNilaBaseAPI } from "./standalone/standaloneBase";
 import { createNilaChartAPI } from "./standalone/standaloneChart";
 import { createNilaGraphicAPI } from "./standalone/standaloneGraphic";
